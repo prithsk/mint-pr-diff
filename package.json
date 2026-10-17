@@ -1,0 +1,25 @@
+{
+  "name": "mint-pr-diff",
+  "version": "0.1.0",
+  "description": "GitHub Action: comment which Mintlify docs pages changed in a PR, with preview links.",
+  "main": "dist/index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "tsc && ncc build lib/index.js -o dist --minify",
+    "test": "tsc && node tests/pages.test.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@actions/core": "1.11.1",
+    "@actions/github": "6.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "22.10.2",
+    "@vercel/ncc": "0.38.3",
+    "typescript": "5.6.3"
+  }
+}

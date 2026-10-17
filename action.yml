@@ -1,0 +1,30 @@
+name: "mint-pr-diff"
+description: "Comment which Mintlify docs pages changed in a PR, with preview links."
+author: "Prithvi Krishnan"
+branding:
+  icon: "file-text"
+  color: "green"
+inputs:
+  github_token:
+    description: "GitHub token with pull-requests: write"
+    required: true
+    default: ${{ github.token }}
+  docs_path:
+    description: "Folder containing docs.json and your .mdx pages. Default: repo root."
+    required: false
+    default: "."
+  preview_base_url:
+    description: "Base URL of the preview deployment, e.g. https://myproject-feature-branch.mintlify.app"
+    required: true
+  comment_when_empty:
+    description: "Post a comment even when no docs pages changed."
+    required: false
+    default: "false"
+outputs:
+  changed_count:
+    description: "Number of docs pages changed."
+  changed_slugs:
+    description: "Comma-separated page slugs."
+runs:
+  using: "node20"
+  main: "dist/index.js"
