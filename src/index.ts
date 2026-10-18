@@ -1,6 +1,6 @@
 import * as core from "@actions/core";
 import * as github from "@actions/github";
-import { collectPageChanges, renderComment, MARKER, ChangedFile } from "./pages";
+import { collectPageChanges, renderComment, MARKER, ChangedFile, detectLanguages, translationDrift, renderDrift } from "./pages";
 
 async function run(): Promise<void> {
   try {
@@ -27,15 +27,26 @@ async function run(): Promise<void> {
     });
 
     const { pages, navChanged } = collectPageChanges(files, docsPath, previewBase);
+
+    // one recursive tree call tells us which translated copies exist
+    let drift: ReturnType<typeof translationDrift> = [];
+    const langInput = core.getInput("languages");
+    if (langInput !== "none") {
+      const tree = await octokit.rest.git.getTree({ owner, repo, tree_sha: pr.head.sha, recursive: "true" });
+      const paths = tree.data.tree.filter((t) => t.type === "blob").map((t) => t.path as string);
+      const langs = langInput ? langInput.split(",").map((l) => l.trim()).filter(Boolean) : detectLanguages(paths, docsPath);
+      drift = translationDrift(files, paths, docsPath, langs);
+    }
+    core.setOutput("translations_behind", String(drift.reduce((n, d) => n + d.behind.length, 0)));
     core.setOutput("changed_count", String(pages.length));
     core.setOutput("changed_slugs", pages.map((p) => p.slug).join(","));
 
-    if (pages.length === 0 && !navChanged && !commentWhenEmpty) {
+    if (pages.length === 0 && !navChanged && drift.length === 0 && !commentWhenEmpty) {
       core.info("No docs pages changed; skipping comment.");
       return;
     }
 
-    const body = renderComment(pages, navChanged, previewBase);
+    const body = renderComment(pages, navChanged, previewBase).replace("\n\n<sub>", renderDrift(drift) + "\n\n<sub>");
 
     const existing = await octokit.paginate(octokit.rest.issues.listComments, {
       owner,

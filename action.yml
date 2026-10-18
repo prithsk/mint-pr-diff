@@ -16,6 +16,10 @@ inputs:
   preview_base_url:
     description: "Base URL of the preview deployment, e.g. https://myproject-feature-branch.mintlify.app"
     required: true
+  languages:
+    description: "Translation folders to check, e.g. es,fr,zh. Default: auto-detect two-letter folders that mirror the docs. Set to none to turn off."
+    required: false
+    default: ""
   comment_when_empty:
     description: "Post a comment even when no docs pages changed."
     required: false
@@ -25,6 +29,8 @@ outputs:
     description: "Number of docs pages changed."
   changed_slugs:
     description: "Comma-separated page slugs."
+  translations_behind:
+    description: "Number of translated copies left behind by this PR."
 runs:
   using: "node20"
   main: "dist/index.js"

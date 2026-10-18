@@ -91,3 +91,51 @@ export function renderComment(pages: PageChange[], navChanged: boolean, previewB
   lines.push("", `<sub>Preview base: ${previewBase} · posted by mint-pr-diff</sub>`);
   return lines.join("\n");
 }
+
+
+/** Language folders that mirror the English tree, e.g. es/, fr/, zh/, pt-BR/. */
+const LANG_DIR = /^[a-z]{2}(-[A-Z]{2})?$/;
+
+export function detectLanguages(repoPaths: string[], docsPath: string): string[] {
+  const root = docsPath.replace(/^\.\/?/, "").replace(/\/+$/, "");
+  const prefix = root && root !== "." ? root + "/" : "";
+  const all = new Set(repoPaths);
+  const counts = new Map<string, number>();
+  for (const p of repoPaths) {
+    if (!p.startsWith(prefix) || !PAGE_EXT.test(p)) continue;
+    const rel = p.slice(prefix.length);
+    const first = rel.split("/")[0];
+    // a language folder mirrors English paths, so only count files that have an English twin
+    if (LANG_DIR.test(first) && rel.includes("/") && all.has(prefix + rel.slice(first.length + 1))) counts.set(first, (counts.get(first) || 0) + 1);
+  }
+  return [...counts.entries()].filter(([, n]) => n >= 5).map(([l]) => l).sort();
+}
+
+export interface DriftItem { page: string; behind: string[]; }
+
+/** English pages changed in this PR whose translated copies exist but were not changed in this PR. */
+export function translationDrift(files: ChangedFile[], repoPaths: string[], docsPath: string, langs: string[]): DriftItem[] {
+  if (!langs.length) return [];
+  const root = docsPath.replace(/^\.\/?/, "").replace(/\/+$/, "");
+  const prefix = root && root !== "." ? root + "/" : "";
+  const changed = new Set(files.map((f) => f.filename));
+  const exists = new Set(repoPaths);
+  const out: DriftItem[] = [];
+  for (const f of files) {
+    if (f.status === "removed" || !f.filename.startsWith(prefix) || !PAGE_EXT.test(f.filename)) continue;
+    const rel = f.filename.slice(prefix.length);
+    if (LANG_DIR.test(rel.split("/")[0]) || rel.startsWith("snippets/")) continue;
+    const behind = langs.filter((l) => exists.has(prefix + l + "/" + rel) && !changed.has(prefix + l + "/" + rel));
+    if (behind.length) out.push({ page: rel.replace(PAGE_EXT, ""), behind });
+  }
+  return out.sort((a, b) => a.page.localeCompare(b.page));
+}
+
+export function renderDrift(drift: DriftItem[]): string {
+  if (!drift.length) return "";
+  const lines = ["", "### Translations not updated in this PR", "",
+    "These English pages changed, but their translated copies did not. They will be out of date until the next translation sync.", "",
+    "| English page | Behind |", "|---|---|"];
+  for (const d of drift) lines.push(`| \`${d.page.replace(/\|/g, "\\|")}\` | ${d.behind.join(", ")} |`);
+  return lines.join("\n");
+}

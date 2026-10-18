@@ -40,3 +40,21 @@ assert.ok(body.includes("Navigation config"));
 const e = renderComment([], false, "https://x.mintlify.app");
 assert.ok(e.includes("No `.mdx`"));
 console.log("all tests passed");
+const { detectLanguages, translationDrift, renderDrift } = require("../lib/pages.js");
+const tree = ["quickstart.mdx","guides/branches.mdx","index.mdx","a.mdx","b.mdx","docs.json",
+  ...["es","fr","zh"].flatMap(l => [`${l}/quickstart.mdx`,`${l}/guides/branches.mdx`,`${l}/index.mdx`,`${l}/a.mdx`,`${l}/b.mdx`]),
+  "zz/only.mdx","snippets/x.mdx"];
+assert.deepStrictEqual(detectLanguages(tree, "."), ["es","fr","zh"]);          // zz has <5 pages, ignored
+const prFiles = [{filename:"quickstart.mdx",status:"modified"},{filename:"es/quickstart.mdx",status:"modified"},
+                 {filename:"guides/branches.mdx",status:"modified"},{filename:"new-page.mdx",status:"added"},
+                 {filename:"index.mdx",status:"removed"}];
+const d = translationDrift(prFiles, tree, ".", ["es","fr","zh"]);
+assert.deepStrictEqual(d, [{page:"guides/branches",behind:["es","fr","zh"]},{page:"quickstart",behind:["fr","zh"]}]);
+assert.ok(renderDrift(d).includes("| `quickstart` | fr, zh |"));
+assert.strictEqual(renderDrift([]), "");
+assert.deepStrictEqual(translationDrift(prFiles, tree, ".", []), []);
+console.log("drift tests passed");
+// a two-letter CONTENT folder (like Mintlify's ai/) is not a language: its files have no English twins
+const tree2 = [...tree, "ai/agents.mdx","ai/mcp.mdx","ai/llms.mdx","ai/search.mdx","ai/chat.mdx","ai/tools.mdx"];
+assert.deepStrictEqual(detectLanguages(tree2, "."), ["es","fr","zh"]);
+console.log("language detection tests passed");

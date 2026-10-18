@@ -1,6 +1,6 @@
 {
   "name": "mint-pr-diff",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "GitHub Action: comment which Mintlify docs pages changed in a PR, with preview links.",
   "main": "dist/index.js",
   "directories": {
